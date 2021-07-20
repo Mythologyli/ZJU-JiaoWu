@@ -25,6 +25,9 @@ class JiaoWu(object):
         # 教务网主修成绩查询 url
         self.major_score_url = 'http://jwbinfosys.zju.edu.cn/xscj_zg.aspx?xh='
 
+        # 教务网成绩更正公示 url
+        self.score_announce_url = 'http://jwbinfosys.zju.edu.cn/cjgs.aspx?xh='
+
         # 请求头
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.67'
@@ -185,6 +188,75 @@ class JiaoWu(object):
         text = soup.find('span', id='Label1').text
         
         return float(text[13:17])
+
+    def get_score_announce(self):
+        '''查询成绩更正公示'''
+
+        # 获取 __VIEWSTATE
+        res = self.sess.get(self.score_announce_url + self.username, headers=self.headers)
+        res.encoding = 'gb2312'
+
+        soup = BeautifulSoup(res.text, 'html.parser')
+        viewstate_part = str(soup.find('form').find_all('input')[2])
+        viewstate = viewstate_part[47:(len(viewstate_part) - 3)]
+
+        # 查询成绩更正公示
+        data = {
+            '__VIEWSTATE': viewstate,
+            'ddlXy': '',
+            'txtXs': self.username,
+            'txtXkkh': '',
+            'btnCx': '查询'.encode(encoding='gb2312')
+        }
+
+        res = self.sess.post(url=(self.score_announce_url + self.username), data=data, headers=self.headers)
+        res.encoding = 'gb2312'
+
+        soup = BeautifulSoup(res.text, 'html.parser')
+        recording_info = soup.find('fieldset').find('legend')
+
+        # 无记录
+        if recording_info.text[10] == '0':
+            return 0
+
+        announce_grid = soup.find('fieldset').find('table')
+
+        row_list = announce_grid.find_all('tr')
+        announce_amount = len(row_list) - 2
+        announce_info_list = []
+
+        for i in range(announce_amount):
+            row = row_list[i + 1].find_all('td')
+
+            announce_info = {
+                '学年': '',
+                '学期': '',
+                '小学期': '',
+                '开课部门': '',
+                '课程名称': '',
+                '学号': '',
+                '姓名': '',
+                '原成绩': '',
+                '更正成绩': '',
+                '申请人': '',
+                '更正原因': ''
+            }
+
+            announce_info['学年'] = row[0].text
+            announce_info['学期'] = row[1].text
+            announce_info['小学期'] = row[2].text
+            announce_info['开课部门'] = row[3].text
+            announce_info['课程名称'] = row[4].text
+            announce_info['学号'] = row[5].text
+            announce_info['姓名'] = row[6].text
+            announce_info['原成绩'] = row[7].text
+            announce_info['更正成绩'] = row[8].text
+            announce_info['申请人'] = row[9].text
+            announce_info['更正原因'] = row[10].text
+
+            announce_info_list.append(announce_info)
+
+        return announce_info_list
 
     def _rsa_encrypt(self, password_str, e_str, M_str):
         '''统一认证登录 rsa 计算'''

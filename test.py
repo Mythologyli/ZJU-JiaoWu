@@ -36,3 +36,12 @@ if __name__=='__main__':
 
     # 查询主修课程均绩
     print('\n您的主修课程均绩为：', jiaowu.get_mgpa())
+
+    # 查询成绩更正公示
+    score_announce_list = jiaowu.get_score_announce()
+    if score_announce_list == 0:
+        print('\n您没有成绩更正公示！')
+    else:
+        print('\n您的成绩更正公示为：')
+        for i in range(len(score_announce_list)):
+            print(score_announce_list[i])
