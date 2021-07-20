@@ -19,6 +19,9 @@ class JiaoWu(object):
         # 教务网登录 url
         self.jiaowu_login_url = 'http://jwbinfosys.zju.edu.cn/default2.aspx'
 
+        # 教务网课程查询 url
+        self.course_url = 'http://jwbinfosys.zju.edu.cn/xskbcx.aspx?xh='
+
         # 教务网成绩查询 url
         self.score_url = 'http://jwbinfosys.zju.edu.cn/xscj.aspx?xh='
 
@@ -62,6 +65,64 @@ class JiaoWu(object):
         
         return 1
 
+    def get_course(self, year, semester):
+        '''查询课表'''
+
+        # 获取 __VIEWSTATE
+        res = self.sess.get(self.course_url + self.username, headers=self.headers)
+        res.encoding = 'gb2312'
+
+        soup = BeautifulSoup(res.text, 'html.parser')
+        viewstate_part = str(soup.find('form').find_all('input')[2])
+        viewstate = viewstate_part[47:(len(viewstate_part) - 3)]
+
+        # 课表查询
+        data = {
+            '__EVENTTARGET': 'xqd',
+            '__EVENTARGUMENT': '',
+            '__VIEWSTATE': viewstate,
+            'xxms': '列表'.encode(encoding='gb2312'),
+            'xnd': year,
+            'xqd': semester.encode(encoding='gb2312'),
+            'kcxx': ''
+        }
+
+        res = self.sess.post(url=(self.course_url + self.username), data=data, headers=self.headers)
+        res.encoding = 'gb2312'
+        
+        soup = BeautifulSoup(res.text.replace('<br>', ' ').replace('&nbsp;', ''), 'html.parser')
+        course_grid = soup.find('table', id='xsgrid')
+        row_list = course_grid.find_all('tr')
+        course_amount = len(row_list) - 1
+        course_info_list = []
+
+        for i in range(course_amount):
+            row = row_list[i + 1].find_all('td')
+
+            course_info = {
+                '课程代码': '',
+                '课程名称': '',
+                '教师姓名': '',
+                '学期': '',
+                '上课时间': '',
+                '上课地点': '',
+                '选课时间': '',
+                '选课志愿': ''
+            }
+
+            course_info['课程代码'] = row[0].text
+            course_info['课程名称'] = row[1].text
+            course_info['教师姓名'] = row[2].text
+            course_info['学期'] = row[3].text
+            course_info['上课时间'] = row[4].text
+            course_info['上课地点'] = row[5].text
+            course_info['选课时间'] = row[6].text
+            course_info['选课志愿'] = row[7].text
+
+            course_info_list.append(course_info)
+
+        return course_info_list
+
     def get_score(self):
         '''查询课程成绩'''
 
@@ -86,7 +147,7 @@ class JiaoWu(object):
         res = self.sess.post(url=(self.score_url + self.username), data=data, headers=self.headers)
         res.encoding = 'gb2312'
 
-        soup = BeautifulSoup(res.text, 'html.parser')
+        soup = BeautifulSoup(res.text.replace('&nbsp;', ''), 'html.parser')
         course_grid = soup.find('table', id='DataGrid1')
         row_list = course_grid.find_all('tr')
         course_amount = len(row_list) - 1
@@ -109,9 +170,6 @@ class JiaoWu(object):
             course_info['成绩'] = row[2].text
             course_info['学分'] = float(row[3].text)
             course_info['绩点'] = float(row[4].text)
-
-            if row[5].text != '\xa0':
-                course_info['补考成绩'] = row[5].text
 
             course_info_list.append(course_info)
 
@@ -146,7 +204,7 @@ class JiaoWu(object):
         res = self.sess.get(self.major_score_url + self.username, headers=self.headers)
         res.encoding = 'gb2312'
         
-        soup = BeautifulSoup(res.text, 'html.parser')
+        soup = BeautifulSoup(res.text.replace('&nbsp;', ''), 'html.parser')
         major_course_grid = soup.find('table', id='DataGrid1')
         row_list = major_course_grid.find_all('tr')
         major_course_amount = len(row_list) - 1
@@ -212,7 +270,7 @@ class JiaoWu(object):
         res = self.sess.post(url=(self.score_announce_url + self.username), data=data, headers=self.headers)
         res.encoding = 'gb2312'
 
-        soup = BeautifulSoup(res.text, 'html.parser')
+        soup = BeautifulSoup(res.text.replace('&nbsp;', ''), 'html.parser')
         recording_info = soup.find('fieldset').find('legend')
 
         # 无记录

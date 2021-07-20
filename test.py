@@ -16,6 +16,22 @@ if __name__=='__main__':
     else: 
         print('登录失败！请检查用户名和密码')
         exit()
+
+    # 查询课表
+    year = input('学年（例：2021-2022）: ')
+    semester = input('学期（例：1|秋、冬）: ')
+
+    if year == '':
+        year = '2021-2022'
+
+    if semester == '':
+        semester = '1|秋、冬'
+
+    print('\n您的课表：')
+    course_list = jiaowu.get_course(year, semester)
+
+    for i in range(len(course_list)):
+        print(course_list[i])
     
     # 查询课程成绩
     print('\n您的课程成绩：')
